@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  STORE_OWNER
+  ADMIN
+}
+
+enum ReservationStatus {
+  PENDING
+  APPROVED
+  READY_FOR_PICKUP
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  password     String
+  name         String
+  role         Role          @default(CUSTOMER)
+  phone        String?
+  address      String?
+  city         String?       @default("Austin, TX")
+  lat          Float?        @default(30.2672)
+  lng          Float?        @default(-97.7431)
+  stores       Store[]       @relation("OwnerStores")
+  reservations Reservation[]
+  orders       Order[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Store {
+  id           String        @id @default(cuid())
+  ownerId      String
+  owner        User          @relation("OwnerStores", fields: [ownerId], references: [id], onDelete: Cascade)
+  name         String
+  description  String?
+  address      String
+  city         String        @default("Austin, TX")
+  zipCode      String
+  lat          Float
+  lng          Float
+  phone        String
+  rating       Float         @default(4.8)
+  reviewCount  Int           @default(32)
+  category     String
+  logoUrl      String?
+  bannerUrl    String?
+  isVerified   Boolean       @default(true)
+  isActive     Boolean       @default(true)
+  products     Product[]
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Product {
+  id           String        @id @default(cuid())
+  storeId      String
+  store        Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name         String
+  description  String
+  category     String
+  price        Float
+  sku          String?
+  stock        Int           @default(10)
+  imageUrl     String
+  tags         String[]
+  isActive     Boolean       @default(true)
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Reservation {
+  id           String            @id @default(cuid())
+  reservationNumber String       @unique
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeId      String
+  store        Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productId    String
+  product      Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity     Int               @default(1)
+  unitPrice    Float
+  totalPrice   Float
+  status       ReservationStatus @default(PENDING)
+  pickupDate   String
+  pickupTime   String
+  notes        String?
+  order        Order?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  reservationId String      @unique
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount        Float
+  status        String      @default("COMPLETED")
+  createdAt     DateTime    @default(now())
+}
