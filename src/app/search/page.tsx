@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNearNeed } from '@/context/NearNeedContext';
 import { ProductCard } from '@/components/ProductCard';
 import { ReservationModal } from '@/components/ReservationModal';
@@ -9,16 +9,21 @@ import { Product } from '@/types';
 import { 
   Search as SearchIcon, 
   MapPin, 
-  Filter, 
   RotateCcw, 
-  SlidersHorizontal,
   ArrowUpDown,
-  PackageX
+  PackageX,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
 export default function SearchPage() {
-  const { products, stores, searchFilters, setSearchFilters, resetSearchFilters, userLocation } = useNearNeed();
+  const { searchFilters, setSearchFilters, resetSearchFilters, userLocation } = useNearNeed();
   const [selectedProductToReserve, setSelectedProductToReserve] = useState<Product | null>(null);
+
+  // API Search State
+  const [dbProducts, setDbProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Local filter states tied to global context
   const query = searchFilters.query;
@@ -27,38 +32,53 @@ export default function SearchPage() {
   const inStockOnly = searchFilters.inStockOnly;
   const sortBy = searchFilters.sortBy;
 
-  // Filter products algorithm
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      // 1. Query match
-      if (query.trim()) {
-        const q = query.toLowerCase();
-        const nameMatch = product.name.toLowerCase().includes(q);
-        const descMatch = product.description.toLowerCase().includes(q);
-        const categoryMatch = product.category.toLowerCase().includes(q);
-        const tagMatch = product.tags.some((t) => t.toLowerCase().includes(q));
-        const storeMatch = product.storeName?.toLowerCase().includes(q);
+  // Fetch search results from PostgreSQL Prisma API route
+  useEffect(() => {
+    let isMounted = true;
 
-        if (!nameMatch && !descMatch && !categoryMatch && !tagMatch && !storeMatch) {
-          return false;
+    async function fetchSearchResults() {
+      setLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams();
+        if (query.trim()) params.append('q', query.trim());
+        if (category && category !== 'all') params.append('category', category);
+        if (inStockOnly) params.append('inStock', 'true');
+
+        const res = await fetch(`/api/products/search?${params.toString()}`);
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || `Search request failed (${res.status})`);
+        }
+        const data = await res.json();
+        if (isMounted) {
+          setDbProducts(data.products || []);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          console.error('Failed to fetch search results from API:', err);
+          setError(err.message || 'An error occurred while connecting to the database search service.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
         }
       }
+    }
 
-      // 2. Category match
-      if (category && category !== 'all' && product.category.toLowerCase() !== category.toLowerCase()) {
-        return false;
-      }
+    fetchSearchResults();
 
-      // 3. Distance match
+    return () => {
+      isMounted = false;
+    };
+  }, [query, category, inStockOnly]);
+
+  // Client-side filtering & sorting for distance and price
+  const filteredProducts = useMemo(() => {
+    return [...dbProducts].filter((product) => {
       if (product.storeDistanceKm !== undefined && product.storeDistanceKm > maxDistanceKm) {
         return false;
       }
-
-      // 4. In Stock filter
-      if (inStockOnly && product.stock <= 0) {
-        return false;
-      }
-
       return true;
     }).sort((a, b) => {
       if (sortBy === 'distance') {
@@ -72,7 +92,7 @@ export default function SearchPage() {
       }
       return 0;
     });
-  }, [products, query, category, maxDistanceKm, inStockOnly, sortBy]);
+  }, [dbProducts, maxDistanceKm, sortBy]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 py-8 px-4 sm:px-6 lg:px-8">
@@ -182,15 +202,56 @@ export default function SearchPage() {
 
             {/* Results Count */}
             <div className="text-slate-500 font-medium">
-              Found <strong className="text-slate-900">{filteredProducts.length}</strong> matching products
+              {loading ? (
+                <span className="flex items-center gap-1.5 text-emerald-600">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Searching database...</span>
+                </span>
+              ) : (
+                <>Found <strong className="text-slate-900">{filteredProducts.length}</strong> matching products</>
+              )}
             </div>
 
           </div>
 
         </div>
 
-        {/* Results Grid */}
-        {filteredProducts.length > 0 ? (
+        {/* LOADING STATE */}
+        {loading && (
+          <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center max-w-lg mx-auto space-y-4 shadow-xs">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Searching Database</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Fetching live products from PostgreSQL Prisma inventory...
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ERROR STATE */}
+        {!loading && error && (
+          <div className="bg-red-50 rounded-3xl p-8 border border-red-200 text-center max-w-lg mx-auto space-y-4 shadow-xs">
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 mx-auto flex items-center justify-center">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-red-900">Search Error</h3>
+              <p className="text-xs text-red-600 mt-1">{error}</p>
+            </div>
+            <button
+              onClick={resetSearchFilters}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {/* RESULTS GRID */}
+        {!loading && !error && filteredProducts.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {filteredProducts.map((product) => (
               <ProductCard
@@ -200,7 +261,10 @@ export default function SearchPage() {
               />
             ))}
           </div>
-        ) : (
+        )}
+
+        {/* NO PRODUCTS FOUND STATE */}
+        {!loading && !error && filteredProducts.length === 0 && (
           <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center max-w-lg mx-auto space-y-4 shadow-xs">
             <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
               <PackageX className="w-8 h-8" />
@@ -208,7 +272,7 @@ export default function SearchPage() {
             <div>
               <h3 className="text-lg font-bold text-slate-900">No Products Found</h3>
               <p className="text-xs text-slate-500 mt-1">
-                We couldn't find any products matching your search criteria around {userLocation.address}.
+                We couldn't find any products matching your search criteria in the PostgreSQL database around {userLocation.address}.
               </p>
             </div>
             <button
