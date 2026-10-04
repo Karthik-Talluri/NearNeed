@@ -1,43 +1,138 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useNearNeed } from '@/context/NearNeedContext';
 import { ProductCard } from '@/components/ProductCard';
 import { ReservationModal } from '@/components/ReservationModal';
-import { Product } from '@/types';
+import { Product, Store } from '@/types';
 import { 
   MapPin, 
   Phone, 
   Star, 
   BadgeCheck, 
   Clock, 
-  Store as StoreIcon, 
   Search, 
   Heart, 
   ChevronRight,
   Package,
-  Navigation
+  Navigation,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
 export default function StoreDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const storeId = params.id as string;
+  const storeId = params?.id as string;
 
-  const { stores, products, currentUser, toggleSaveStore } = useNearNeed();
+  const { currentUser, toggleSaveStore, userLocation } = useNearNeed();
+  
+  // API Fetch State
+  const [store, setStore] = useState<Store | null>(null);
+  const [dbProducts, setDbProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [notFound, setNotFound] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
   const [catalogQuery, setCatalogQuery] = useState('');
   const [selectedProductToReserve, setSelectedProductToReserve] = useState<Product | null>(null);
 
-  const store = stores.find((s) => s.id === storeId);
+  useEffect(() => {
+    if (!storeId) return;
 
-  if (!store) {
+    let isMounted = true;
+
+    async function fetchStoreDetails() {
+      setLoading(true);
+      setNotFound(false);
+      setError(null);
+
+      try {
+        const queryParams = new URLSearchParams();
+        if (userLocation.lat) queryParams.append('lat', userLocation.lat.toString());
+        if (userLocation.lng) queryParams.append('lng', userLocation.lng.toString());
+
+        const res = await fetch(`/api/stores/${encodeURIComponent(storeId)}?${queryParams.toString()}`);
+        
+        if (res.status === 404) {
+          if (isMounted) {
+            setNotFound(true);
+            setLoading(false);
+          }
+          return;
+        }
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Failed to fetch store (${res.status})`);
+        }
+
+        const data = await res.json();
+        if (isMounted) {
+          setStore(data.store);
+          setDbProducts(data.products || []);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          console.error('Error loading store details:', err);
+          setError(err.message || 'Failed to load store details.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchStoreDetails();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [storeId, userLocation.lat, userLocation.lng]);
+
+  const isSaved = store ? currentUser.savedStores?.includes(store.id) : false;
+
+  // Filter store products for in-store catalog search
+  const filteredStoreProducts = useMemo(() => {
+    return dbProducts.filter((p) => {
+      if (!catalogQuery.trim()) return true;
+      const q = catalogQuery.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        p.tags.some((t) => t.toLowerCase().includes(q))
+      );
+    });
+  }, [dbProducts, catalogQuery]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl p-12 max-w-md w-full text-center space-y-4 shadow-sm border border-slate-200">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Loading Store Details</h3>
+            <p className="text-xs text-slate-500 mt-1">Fetching inventory and store information from database...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Not Found state
+  if (notFound || !store) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center space-y-4 shadow-md border border-slate-200">
           <h2 className="text-xl font-bold text-slate-900">Store Not Found</h2>
-          <p className="text-xs text-slate-500">The store you are looking for may have closed or moved.</p>
+          <p className="text-xs text-slate-500">The store you are looking for may have closed or does not exist in our directory.</p>
           <button
             onClick={() => router.push('/stores')}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl transition-colors"
@@ -49,15 +144,26 @@ export default function StoreDetailPage() {
     );
   }
 
-  const isSaved = currentUser.savedStores?.includes(store.id);
-
-  // Store's products list
-  const storeProducts = products.filter((p) => p.storeId === store.id && p.isActive);
-  const filteredStoreProducts = storeProducts.filter((p) => {
-    if (!catalogQuery.trim()) return true;
-    const q = catalogQuery.toLowerCase();
-    return p.name.toLowerCase().includes(q) || p.description.toLowerCase().includes(q) || p.category.toLowerCase().includes(q);
-  });
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center space-y-4 shadow-md border border-red-200">
+          <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 mx-auto flex items-center justify-center">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Error Loading Store</h2>
+          <p className="text-xs text-red-600">{error}</p>
+          <button
+            onClick={() => router.push('/stores')}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl transition-colors"
+          >
+            Back to Stores Directory
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50/50 pb-12">
@@ -65,7 +171,7 @@ export default function StoreDetailPage() {
       {/* Banner & Header Hero */}
       <div className="relative h-64 sm:h-80 w-full bg-slate-900 overflow-hidden">
         <img
-          src={store.bannerUrl}
+          src={store.bannerUrl || 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&q=80&w=1200'}
           alt={store.name}
           className="w-full h-full object-cover opacity-80"
         />
@@ -93,7 +199,7 @@ export default function StoreDetailPage() {
         <div className="absolute bottom-6 left-4 sm:left-8 right-4 sm:right-8 flex flex-col sm:flex-row sm:items-end gap-4 text-white z-10">
           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white p-1 shadow-2xl border-2 border-white flex-shrink-0">
             <img
-              src={store.logoUrl}
+              src={store.logoUrl || 'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?auto=format&fit=crop&q=80&w=200'}
               alt={store.name}
               className="w-full h-full object-cover rounded-xl"
             />
@@ -120,7 +226,9 @@ export default function StoreDetailPage() {
             <p className="text-xs sm:text-sm text-slate-300 flex items-center gap-2 font-medium">
               <MapPin className="w-4 h-4 text-emerald-400 flex-shrink-0" />
               <span>{store.address}, {store.city}, {store.zipCode}</span>
-              <span className="text-emerald-400 font-bold">• {store.distanceKm} km away</span>
+              {store.distanceKm !== undefined && (
+                <span className="text-emerald-400 font-bold">• {store.distanceKm} km away</span>
+              )}
             </p>
           </div>
         </div>
@@ -165,9 +273,11 @@ export default function StoreDetailPage() {
                   <Navigation className="w-4 h-4 text-emerald-600" />
                   <span>Store Location</span>
                 </h3>
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                  {store.distanceKm} km
-                </span>
+                {store.distanceKm !== undefined && (
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                    {store.distanceKm} km
+                  </span>
+                )}
               </div>
               
               {/* Simulated Map Visual */}

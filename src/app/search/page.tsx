@@ -44,6 +44,9 @@ export default function SearchPage() {
         if (query.trim()) params.append('q', query.trim());
         if (category && category !== 'all') params.append('category', category);
         if (inStockOnly) params.append('inStock', 'true');
+        if (userLocation.lat) params.append('lat', userLocation.lat.toString());
+        if (userLocation.lng) params.append('lng', userLocation.lng.toString());
+        params.append('maxDistance', maxDistanceKm.toString());
 
         const res = await fetch(`/api/products/search?${params.toString()}`);
         if (!res.ok) {
@@ -71,16 +74,11 @@ export default function SearchPage() {
     return () => {
       isMounted = false;
     };
-  }, [query, category, inStockOnly]);
+  }, [query, category, inStockOnly, maxDistanceKm, userLocation.lat, userLocation.lng]);
 
-  // Client-side filtering & sorting for distance and price
+  // Client-side sorting for distance and price
   const filteredProducts = useMemo(() => {
-    return [...dbProducts].filter((product) => {
-      if (product.storeDistanceKm !== undefined && product.storeDistanceKm > maxDistanceKm) {
-        return false;
-      }
-      return true;
-    }).sort((a, b) => {
+    return [...dbProducts].sort((a, b) => {
       if (sortBy === 'distance') {
         return (a.storeDistanceKm || 0) - (b.storeDistanceKm || 0);
       }
@@ -92,7 +90,7 @@ export default function SearchPage() {
       }
       return 0;
     });
-  }, [dbProducts, maxDistanceKm, sortBy]);
+  }, [dbProducts, sortBy]);
 
   return (
     <div className="min-h-screen bg-slate-50/50 py-8 px-4 sm:px-6 lg:px-8">

@@ -1,31 +1,93 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useNearNeed } from '@/context/NearNeedContext';
-import { ReservationStatus } from '@/types';
+import { Reservation, ReservationStatus } from '@/types';
 import { 
   CalendarCheck, 
   MapPin, 
   Store, 
   Clock, 
-  CheckCircle2, 
-  XCircle, 
-  AlertCircle, 
-  Phone, 
-  QrCode,
   ArrowRight,
-  ShieldCheck
+  ShieldCheck,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
 export default function CustomerReservationsPage() {
-  const { reservations, currentUser, cancelReservation } = useNearNeed();
+  const { currentUser, loginUser } = useNearNeed();
   const [activeTab, setActiveTab] = useState<'ALL' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED'>('ACTIVE');
+  
+  // API state
+  const [dbReservations, setDbReservations] = useState<Reservation[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  // Filter reservations for current user
-  const customerReservations = reservations.filter((r) => r.userId === currentUser.id);
+  const fetchReservations = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      let res = await fetch('/api/reservations');
 
-  const filteredReservations = customerReservations.filter((r) => {
+      // Auto-authenticate default customer alex.customer@nearneed.com if session expired
+      if (res.status === 401) {
+        const loggedIn = await loginUser('alex.customer@nearneed.com', 'password123');
+        if (loggedIn) {
+          res = await fetch('/api/reservations');
+        }
+      }
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Failed to fetch reservations (${res.status})`);
+      }
+
+      const data = await res.json();
+      setDbReservations(data.reservations || []);
+    } catch (err: any) {
+      console.error('Error fetching reservations:', err);
+      setError(err.message || 'Unable to load reservations from database.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReservations();
+  }, []);
+
+  const handleCancelReservation = async (reservationId: string) => {
+    if (!confirm('Are you sure you want to cancel this hold reservation?')) return;
+
+    setCancellingId(reservationId);
+    try {
+      const res = await fetch(`/api/reservations/${reservationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'CANCEL' }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        alert(errData.error || 'Failed to cancel reservation.');
+        return;
+      }
+
+      const data = await res.json();
+      setDbReservations((prev) =>
+        prev.map((r) => (r.id === reservationId ? data.reservation : r))
+      );
+    } catch (err: any) {
+      console.error('Cancellation error:', err);
+      alert(err.message || 'Error cancelling reservation.');
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
+  const filteredReservations = dbReservations.filter((r) => {
     if (activeTab === 'ACTIVE') {
       return r.status === 'PENDING' || r.status === 'APPROVED' || r.status === 'READY_FOR_PICKUP';
     }
@@ -69,7 +131,7 @@ export default function CustomerReservationsPage() {
               Store Pickup Reservations
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Manage your active product holds and view past store pickups.
+              Manage your active product holds and view past store pickups in PostgreSQL.
             </p>
           </div>
 
@@ -104,8 +166,42 @@ export default function CustomerReservationsPage() {
           ))}
         </div>
 
+        {/* LOADING STATE */}
+        {loading && (
+          <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center max-w-lg mx-auto space-y-4 shadow-xs">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Loading Reservations</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Fetching live hold orders from PostgreSQL database...
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ERROR STATE */}
+        {!loading && error && (
+          <div className="bg-red-50 rounded-3xl p-8 border border-red-200 text-center max-w-lg mx-auto space-y-4 shadow-xs">
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 mx-auto flex items-center justify-center">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-red-900">Error Loading Reservations</h3>
+              <p className="text-xs text-red-600 mt-1">{error}</p>
+            </div>
+            <button
+              onClick={fetchReservations}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Reservations List */}
-        {filteredReservations.length > 0 ? (
+        {!loading && !error && filteredReservations.length > 0 && (
           <div className="space-y-4">
             {filteredReservations.map((res) => (
               <div
@@ -119,6 +215,9 @@ export default function CustomerReservationsPage() {
                     <h3 className="font-mono font-bold text-slate-900 text-lg">
                       {res.reservationNumber}
                     </h3>
+                    <span className="text-[11px] text-slate-500 block font-medium mt-0.5">
+                      Reserved on {new Date(res.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
                   <div>{getStatusBadge(res.status)}</div>
                 </div>
@@ -134,11 +233,9 @@ export default function CustomerReservationsPage() {
                       className="w-20 h-20 rounded-2xl object-cover border border-slate-200 flex-shrink-0"
                     />
                     <div className="space-y-1 min-w-0">
-                      <Link href={`/product/${res.productId}`}>
-                        <h4 className="font-bold text-slate-900 text-base hover:text-emerald-700 transition-colors line-clamp-1">
-                          {res.productName}
-                        </h4>
-                      </Link>
+                      <h4 className="font-bold text-slate-900 text-base line-clamp-1">
+                        {res.productName}
+                      </h4>
                       <p className="text-xs text-slate-500 font-medium">
                         Qty: <strong className="text-slate-900">{res.quantity}</strong> × ${res.unitPrice.toFixed(2)}
                       </p>
@@ -175,16 +272,13 @@ export default function CustomerReservationsPage() {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    {res.status !== 'CANCELLED' && res.status !== 'COMPLETED' && (
+                    {res.status === 'PENDING' && (
                       <button
-                        onClick={() => {
-                          if (confirm('Are you sure you want to cancel this reservation?')) {
-                            cancelReservation(res.id);
-                          }
-                        }}
-                        className="px-3.5 py-2 rounded-xl text-rose-600 hover:bg-rose-50 font-semibold transition-colors"
+                        onClick={() => handleCancelReservation(res.id)}
+                        disabled={cancellingId === res.id}
+                        className="px-3.5 py-2 rounded-xl text-rose-600 hover:bg-rose-50 font-semibold transition-colors disabled:opacity-50"
                       >
-                        Cancel Hold
+                        {cancellingId === res.id ? 'Cancelling...' : 'Cancel Hold'}
                       </button>
                     )}
 
@@ -201,7 +295,10 @@ export default function CustomerReservationsPage() {
               </div>
             ))}
           </div>
-        ) : (
+        )}
+
+        {/* EMPTY STATE */}
+        {!loading && !error && filteredReservations.length === 0 && (
           <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center max-w-md mx-auto space-y-4">
             <CalendarCheck className="w-12 h-12 text-slate-300 mx-auto" />
             <h3 className="text-lg font-bold text-slate-900">No Reservations Found</h3>

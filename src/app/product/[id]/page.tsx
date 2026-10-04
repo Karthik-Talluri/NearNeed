@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useNearNeed } from '@/context/NearNeedContext';
 import { ReservationModal } from '@/components/ReservationModal';
 import { ProductCard } from '@/components/ProductCard';
-import { Product } from '@/types';
+import { Product, Store } from '@/types';
 import { 
   MapPin, 
   Store as StoreIcon, 
@@ -20,20 +20,98 @@ import {
   Share2, 
   ArrowLeft,
   BadgeCheck,
-  Tag
+  Tag,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const productId = params.id as string;
+  const productId = params?.id as string;
   
-  const { products, stores } = useNearNeed();
+  const { products: contextProducts, stores: contextStores, userLocation } = useNearNeed();
   const [isReservationModalOpen, setIsReservationModalOpen] = useState(false);
 
-  const product = products.find((p) => p.id === productId);
+  const [dbProduct, setDbProduct] = useState<Product | null>(null);
+  const [dbStore, setDbStore] = useState<Store | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!product) {
+  useEffect(() => {
+    if (!productId) return;
+
+    let isMounted = true;
+    async function fetchProduct() {
+      setLoading(true);
+      setError(null);
+      try {
+        const queryParams = new URLSearchParams();
+        if (userLocation.lat) queryParams.append('lat', userLocation.lat.toString());
+        if (userLocation.lng) queryParams.append('lng', userLocation.lng.toString());
+
+        const res = await fetch(`/api/products/${encodeURIComponent(productId)}?${queryParams.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (isMounted) {
+            setDbProduct(data.product);
+            setDbStore(data.store);
+          }
+        } else {
+          // Fallback to context product
+          const fallbackProd = contextProducts.find((p) => p.id === productId);
+          if (fallbackProd && isMounted) {
+            setDbProduct(fallbackProd);
+            const fallbackStore = contextStores.find((s) => s.id === fallbackProd.storeId);
+            setDbStore(fallbackStore || null);
+          } else if (isMounted) {
+            setError('Product not found in inventory.');
+          }
+        }
+      } catch (err: any) {
+        console.error('Error loading product details:', err);
+        const fallbackProd = contextProducts.find((p) => p.id === productId);
+        if (fallbackProd && isMounted) {
+          setDbProduct(fallbackProd);
+          const fallbackStore = contextStores.find((s) => s.id === fallbackProd.storeId);
+          setDbStore(fallbackStore || null);
+        } else if (isMounted) {
+          setError(err.message || 'Failed to fetch product details.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchProduct();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [productId, userLocation.lat, userLocation.lng, contextProducts, contextStores]);
+
+  const product = dbProduct;
+  const store = dbStore || (product ? contextStores.find((s) => s.id === product.storeId) : undefined);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl p-12 max-w-md w-full text-center space-y-4 shadow-sm border border-slate-200">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-slate-900">Loading Product Details</h3>
+            <p className="text-xs text-slate-500 mt-1">Fetching live inventory from PostgreSQL database...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product || error) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-3xl p-8 max-w-md w-full text-center space-y-4 shadow-md border border-slate-200">
@@ -50,12 +128,11 @@ export default function ProductDetailPage() {
     );
   }
 
-  const store = stores.find((s) => s.id === product.storeId);
   const isOutOfStock = product.stock <= 0;
   const isLowStock = product.stock > 0 && product.stock <= 3;
 
   // Related products in same category or same store
-  const relatedProducts = products
+  const relatedProducts = contextProducts
     .filter((p) => p.id !== product.id && (p.category === product.category || p.storeId === product.storeId))
     .slice(0, 4);
 
@@ -187,7 +264,7 @@ export default function ProductDetailPage() {
 
                   <p className="text-xs text-slate-500 flex items-center gap-1 font-medium">
                     <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{store.address}, {store.city} ({store.distanceKm} km away)</span>
+                    <span>{store.address}, {store.city} ({store.distanceKm || product.storeDistanceKm || 1.2} km away)</span>
                   </p>
 
                   <div className="flex items-center justify-between text-xs pt-1">

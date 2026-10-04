@@ -3,7 +3,27 @@ import { prisma } from '../src/lib/prisma';
 async function main() {
   console.log('Starting NearNeed development database seeding...');
 
-  // 1. Ensure a Store Owner User exists for relations
+  // 1. Ensure a Customer User exists
+  const customerUser = await prisma.user.upsert({
+    where: { email: 'alex.customer@nearneed.com' },
+    update: {
+      name: 'Alex Morgan',
+      role: 'CUSTOMER',
+    },
+    create: {
+      id: 'usr-1',
+      email: 'alex.customer@nearneed.com',
+      password: '$2a$10$e8wJp/3D/e9V9w5D8G0gO.8L9S2L6l2l2l2l2l2l2l2l2l2l2l2l2', // dummy hashed pass
+      name: 'Alex Morgan',
+      role: 'CUSTOMER',
+      phone: '+1 (555) 234-5678',
+      address: '742 Evergreen Terrace',
+      city: 'Austin, TX',
+    },
+  });
+  console.log('Upserted customer user:', customerUser.email);
+
+  // 2. Ensure a Store Owner User exists
   const ownerUser = await prisma.user.upsert({
     where: { email: 'marcus.owner@nearneed.com' },
     update: {
@@ -13,7 +33,7 @@ async function main() {
     create: {
       id: 'usr-dev-owner',
       email: 'marcus.owner@nearneed.com',
-      password: '$2a$10$e8wJp/3D/e9V9w5D8G0gO.8L9S2L6l2l2l2l2l2l2l2l2l2l2l2l2', // dummy hashed pass
+      password: '$2a$10$e8wJp/3D/e9V9w5D8G0gO.8L9S2L6l2l2l2l2l2l2l2l2l2l2l2l2',
       name: 'Marcus Vance',
       role: 'STORE_OWNER',
       phone: '+1 (512) 555-8765',
@@ -21,8 +41,9 @@ async function main() {
       city: 'Austin, TX',
     },
   });
+  console.log('Upserted owner user:', ownerUser.email);
 
-  // 2. Define Stores
+  // 3. Define Stores
   const storesData = [
     {
       id: 'store-dev-urban-fashion',
@@ -111,9 +132,8 @@ async function main() {
   }
   console.log(`Upserted ${storesData.length} stores successfully.`);
 
-  // 3. Define Products
+  // 4. Define Products
   const productsData = [
-    // Urban Fashion Store Products
     {
       id: 'prod-dev-black-formal-shirt',
       storeId: 'store-dev-urban-fashion',
@@ -166,8 +186,6 @@ async function main() {
       tags: ['black', 'shoes', 'formal', 'footwear', 'leather', 'menswear'],
       isActive: true,
     },
-
-    // Tech World Products
     {
       id: 'prod-dev-wireless-mouse',
       storeId: 'store-dev-tech-world',
@@ -220,8 +238,6 @@ async function main() {
       tags: ['stand', 'laptop', 'electronics', 'accessories', 'desk'],
       isActive: true,
     },
-
-    // City Electronics Products
     {
       id: 'prod-dev-bluetooth-earphones',
       storeId: 'store-dev-city-electronics',
@@ -274,8 +290,6 @@ async function main() {
       tags: ['headphones', 'wireless', 'audio', 'electronics', 'bluetooth'],
       isActive: true,
     },
-
-    // Smart Choice Store Products
     {
       id: 'prod-dev-smartphone',
       storeId: 'store-dev-smart-choice',
