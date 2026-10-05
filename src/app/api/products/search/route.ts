@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 // Haversine formula to compute geographic distance in kilometers
 function calculateHaversineDistanceKm(
   lat1: number,
@@ -75,7 +77,7 @@ export async function GET(request: Request) {
       }
     }
 
-    let products;
+    let products: any[] = [];
     try {
       products = await prisma.product.findMany({
         where: whereClause,
@@ -101,54 +103,59 @@ export async function GET(request: Request) {
       });
     } catch (queryErr: any) {
       console.warn('Primary product search query failed, using resilient fallback:', queryErr?.message || queryErr);
-      // Fallback base query without complex filter clauses if driver adapter error occurs
-      products = await prisma.product.findMany({
-        where: {
-          isActive: true,
-          store: {
+      try {
+        // Fallback base query without complex filter clauses if driver adapter error occurs
+        products = await prisma.product.findMany({
+          where: {
             isActive: true,
-          },
-        },
-        include: {
-          store: {
-            select: {
-              id: true,
-              name: true,
-              address: true,
-              city: true,
-              phone: true,
-              rating: true,
-              lat: true,
-              lng: true,
+            store: {
               isActive: true,
             },
           },
-        },
-        take: limit,
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
+          include: {
+            store: {
+              select: {
+                id: true,
+                name: true,
+                address: true,
+                city: true,
+                phone: true,
+                rating: true,
+                lat: true,
+                lng: true,
+                isActive: true,
+              },
+            },
+          },
+          take: limit,
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
 
-      // Perform in-memory keyword & category filtering on fallback results
-      if (category && category.toLowerCase() !== 'all') {
-        products = products.filter(
-          (p) => p.category.toLowerCase() === category.toLowerCase()
-        );
-      }
-      if (q) {
-        const qLower = q.toLowerCase();
-        products = products.filter(
-          (p) =>
-            p.name.toLowerCase().includes(qLower) ||
-            p.description.toLowerCase().includes(qLower) ||
-            p.category.toLowerCase().includes(qLower) ||
-            (p.tags && p.tags.some((t) => t.toLowerCase().includes(qLower)))
-        );
+        // Perform in-memory keyword & category filtering on fallback results
+        if (category && category.toLowerCase() !== 'all') {
+          products = products.filter(
+            (p) => (p.category || '').toLowerCase() === category.toLowerCase()
+          );
+        }
+        if (q) {
+          const qLower = q.toLowerCase();
+          products = products.filter(
+            (p) =>
+              (p.name || '').toLowerCase().includes(qLower) ||
+              (p.description || '').toLowerCase().includes(qLower) ||
+              (p.category || '').toLowerCase().includes(qLower) ||
+              (Array.isArray(p.tags) && p.tags.some((t: string) => typeof t === 'string' && t.toLowerCase().includes(qLower)))
+          );
+        }
+      } catch (fallbackErr: any) {
+        console.error('Fallback product search query failed:', fallbackErr?.message || fallbackErr);
+        products = [];
       }
     }
 
-    const formattedProducts = products
+    const formattedProducts = (products || [])
       .map((p) => {
         const storeDist = (p.store && typeof p.store.lat === 'number' && typeof p.store.lng === 'number')
           ? calculateHaversineDistanceKm(userLat, userLng, p.store.lat, p.store.lng)
@@ -162,15 +169,15 @@ export async function GET(request: Request) {
           storeCity: p.store?.city || 'Austin, TX',
           storePhone: p.store?.phone || '',
           storeDistanceKm: storeDist,
-          name: p.name,
-          description: p.description,
-          category: p.category,
-          price: p.price,
+          name: p.name || '',
+          description: p.description || '',
+          category: p.category || '',
+          price: p.price ?? 0,
           sku: p.sku || '',
-          stock: p.stock,
-          imageUrl: p.imageUrl,
-          tags: p.tags || [],
-          isActive: p.isActive,
+          stock: p.stock ?? 0,
+          imageUrl: p.imageUrl || '',
+          tags: Array.isArray(p.tags) ? p.tags : [],
+          isActive: p.isActive ?? true,
         };
       })
       .filter((p) => p.storeDistanceKm <= maxDistanceKm);
@@ -184,3 +191,4 @@ export async function GET(request: Request) {
     );
   }
 }
+

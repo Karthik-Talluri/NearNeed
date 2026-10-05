@@ -5,19 +5,23 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
 function getDatabaseUrl(): string {
+  let url = '';
   try {
     const envPath = path.join(process.cwd(), '.env');
     if (fs.existsSync(envPath)) {
       const content = fs.readFileSync(envPath, 'utf8');
       const match = content.match(/DATABASE_URL=["']?([^"'\n\r]+)["']?/);
       if (match && match[1]) {
-        return match[1];
+        url = match[1];
       }
     }
   } catch (err) {
     // fallback
   }
-  return process.env.DATABASE_URL || '';
+  if (!url) {
+    url = process.env.DATABASE_URL || '';
+  }
+  return url.trim().replace(/^["']|["']$/g, '');
 }
 
 const connectionString = getDatabaseUrl();
@@ -41,4 +45,5 @@ export const prisma =
     log: process.env.NODE_ENV === 'development' ? ['error'] : ['error'],
   });
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+globalForPrisma.prisma = prisma;
+
