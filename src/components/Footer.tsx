@@ -100,7 +100,7 @@ export const Footer: React.FC = () => {
                 <Mail className="w-4 h-4 text-emerald-400" /> support@nearneed.com
               </li>
               <li className="flex items-center gap-2 text-slate-400">
-                <Phone className="w-4 h-4 text-emerald-400" /> +1 (800) 555-NEAR
+                <Phone className="w-4 h-4 text-emerald-400" /> 1800 123 NEAR (+91)
               </li>
             </ul>
           </div>

@@ -29,8 +29,8 @@ export async function GET(request: Request) {
     const q = searchParams.get('q')?.trim() || '';
     const category = searchParams.get('category')?.trim() || '';
     const inStockOnly = searchParams.get('inStock') === 'true';
-    const userLat = Number(searchParams.get('lat')) || 30.2672;
-    const userLng = Number(searchParams.get('lng')) || -97.7431;
+    const userLat = Number(searchParams.get('lat')) || 13.0827;
+    const userLng = Number(searchParams.get('lng')) || 80.2707;
     const maxDistanceKm = Number(searchParams.get('maxDistance')) || Number(searchParams.get('radius')) || 50;
     const limit = Math.min(Number(searchParams.get('limit')) || 50, 100);
 
@@ -166,7 +166,7 @@ export async function GET(request: Request) {
           storeId: p.storeId,
           storeName: p.store?.name || 'Local Store',
           storeAddress: p.store?.address || '',
-          storeCity: p.store?.city || 'Austin, TX',
+          storeCity: p.store?.city || 'Chennai, Tamil Nadu',
           storePhone: p.store?.phone || '',
           storeDistanceKm: storeDist,
           name: p.name || '',

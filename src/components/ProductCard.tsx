@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Product } from '@/types';
 import { MapPin, Store, CheckCircle, AlertTriangle, ArrowRight, Bookmark } from 'lucide-react';
 
+import { formatCurrency } from '@/lib/formatters';
+
 interface ProductCardProps {
   product: Product;
   onReserve?: (product: Product) => void;
@@ -84,7 +86,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onReserve }) 
           <div>
             <span className="text-xs text-slate-400 block font-medium">Price</span>
             <span className="text-lg font-extrabold text-slate-900">
-              ${product.price.toFixed(2)}
+              {formatCurrency(product.price)}
             </span>
           </div>
 

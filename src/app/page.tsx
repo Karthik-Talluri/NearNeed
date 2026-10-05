@@ -162,8 +162,8 @@ export default function HomePage() {
                 'Black Formal Shirt',
                 'Wireless Headphones',
                 'Running Shoes',
-                '65W GaN Charger',
-                'Espresso Beans',
+                'USB-C Charger',
+                'Filter Coffee',
               ].map((chip) => (
                 <button
                   key={chip}

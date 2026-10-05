@@ -3,13 +3,14 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useNearNeed } from '@/context/NearNeedContext';
+import { formatCurrency } from '@/lib/formatters';
 import { ReservationStatus } from '@/types';
 import { 
   Store as StoreIcon, 
   Package, 
   Boxes, 
   CalendarCheck, 
-  DollarSign, 
+  IndianRupee, 
   Plus, 
   CheckCircle2, 
   Clock, 
@@ -122,11 +123,11 @@ export default function StoreOwnerDashboard() {
           <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Est. Hold Value</span>
-              <h3 className="text-3xl font-extrabold text-slate-900 mt-1">${estimatedRevenue.toFixed(2)}</h3>
+              <h3 className="text-3xl font-extrabold text-slate-900 mt-1">{formatCurrency(estimatedRevenue)}</h3>
               <span className="text-[11px] text-slate-400 font-medium mt-1 block">{completedCount} completed pickups</span>
             </div>
             <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center">
-              <DollarSign className="w-6 h-6" />
+              <IndianRupee className="w-6 h-6" />
             </div>
           </div>
 
@@ -189,7 +190,7 @@ export default function StoreOwnerDashboard() {
                         </div>
                       </td>
                       <td className="py-3.5 px-4 font-bold">{res.quantity}</td>
-                      <td className="py-3.5 px-4 font-extrabold text-emerald-800">${res.totalPrice.toFixed(2)}</td>
+                      <td className="py-3.5 px-4 font-extrabold text-emerald-800">{formatCurrency(res.totalPrice)}</td>
                       <td className="py-3.5 px-4 text-slate-600">
                         {res.pickupDate} ({res.pickupTime})
                       </td>

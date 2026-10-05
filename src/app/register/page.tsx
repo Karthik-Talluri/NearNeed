@@ -16,7 +16,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('Austin, TX');
+  const [address, setAddress] = useState('Chennai, Tamil Nadu');
   const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -33,7 +33,7 @@ export default function RegisterPage() {
         role,
         phone,
         address,
-        city: 'Austin, TX',
+        city: 'Chennai, Tamil Nadu',
       });
 
       if (success) {
@@ -118,7 +118,7 @@ export default function RegisterPage() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Sarah Connor"
+                  placeholder="e.g. Priya Sharma"
                   className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   required
                 />
@@ -152,7 +152,7 @@ export default function RegisterPage() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="+91 98765 43210"
                   className="w-full pl-10 pr-3.5 py-2.5 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   required
                 />

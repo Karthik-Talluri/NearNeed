@@ -45,7 +45,7 @@ export async function POST(request: Request) {
         role: requestedRole,
         phone: phone || null,
         address: address || null,
-        city: city || 'Austin, TX',
+        city: city || 'Chennai, Tamil Nadu',
       },
     });
 

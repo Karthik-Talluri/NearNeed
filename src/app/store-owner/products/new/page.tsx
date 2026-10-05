@@ -117,14 +117,14 @@ export default function AddProductPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Price ($ USD)
+                  Price (₹ INR)
                 </label>
                 <input
                   type="number"
                   step="0.01"
                   value={price}
                   onChange={(e) => setPrice(e.target.value)}
-                  placeholder="68.00"
+                  placeholder="1299"
                   className="w-full p-3 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   required
                 />

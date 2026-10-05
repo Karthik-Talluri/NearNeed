@@ -26,9 +26,9 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
 
-    // Default to Austin, TX coordinates (30.2672, -97.7431) if lat/lng not provided
-    const userLat = Number(searchParams.get('lat')) || 30.2672;
-    const userLng = Number(searchParams.get('lng')) || -97.7431;
+    // Default to Chennai, Tamil Nadu coordinates (13.0827, 80.2707) if lat/lng not provided
+    const userLat = Number(searchParams.get('lat')) || 13.0827;
+    const userLng = Number(searchParams.get('lng')) || 80.2707;
     const radius = Number(searchParams.get('radius')) || 50; // max distance in km
     const category = searchParams.get('category')?.trim() || '';
     const q = searchParams.get('q')?.trim() || searchParams.get('query')?.trim() || '';

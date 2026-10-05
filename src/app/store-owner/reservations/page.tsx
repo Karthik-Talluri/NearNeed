@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useNearNeed } from '@/context/NearNeedContext';
+import { formatCurrency } from '@/lib/formatters';
 import { ReservationStatus } from '@/types';
 import { CalendarCheck, Clock, CheckCircle2, XCircle, Phone, MapPin, User } from 'lucide-react';
 
@@ -92,7 +93,7 @@ export default function StoreOwnerReservationsPage() {
                 <div className="flex flex-col items-end gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                   <div className="text-right">
                     <span className="text-[10px] text-slate-400 uppercase font-bold">Total Payment</span>
-                    <p className="text-lg font-extrabold text-emerald-800">${res.totalPrice.toFixed(2)}</p>
+                    <p className="text-lg font-extrabold text-emerald-800">{formatCurrency(res.totalPrice)}</p>
                   </div>
 
                   <div className="flex items-center gap-2">

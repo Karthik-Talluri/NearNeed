@@ -105,7 +105,7 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="py-3.5 px-4 text-slate-600">{u.email}</td>
                     <td className="py-3.5 px-4 text-slate-600">{u.phone || 'N/A'}</td>
-                    <td className="py-3.5 px-4 text-slate-600">{u.city || 'Austin, TX'}</td>
+                    <td className="py-3.5 px-4 text-slate-600">{u.city || 'Chennai, Tamil Nadu'}</td>
                     <td className="py-3.5 px-4 text-right">
                       <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
                         Active

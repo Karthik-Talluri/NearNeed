@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useNearNeed } from '@/context/NearNeedContext';
+import { formatCurrency } from '@/lib/formatters';
 import { Reservation, ReservationStatus } from '@/types';
 import { 
   CalendarCheck, 
@@ -216,7 +217,7 @@ export default function CustomerReservationsPage() {
                       {res.reservationNumber}
                     </h3>
                     <span className="text-[11px] text-slate-500 block font-medium mt-0.5">
-                      Reserved on {new Date(res.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      Reserved on {new Date(res.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   <div>{getStatusBadge(res.status)}</div>
@@ -237,10 +238,10 @@ export default function CustomerReservationsPage() {
                         {res.productName}
                       </h4>
                       <p className="text-xs text-slate-500 font-medium">
-                        Qty: <strong className="text-slate-900">{res.quantity}</strong> × ${res.unitPrice.toFixed(2)}
+                        Qty: <strong className="text-slate-900">{res.quantity}</strong> × {formatCurrency(res.unitPrice)}
                       </p>
                       <p className="text-sm font-extrabold text-emerald-800">
-                        Total: ${res.totalPrice.toFixed(2)}
+                        Total: {formatCurrency(res.totalPrice)}
                       </p>
                     </div>
                   </div>

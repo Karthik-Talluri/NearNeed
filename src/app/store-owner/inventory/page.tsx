@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useNearNeed } from '@/context/NearNeedContext';
+import { formatCurrency } from '@/lib/formatters';
 import { Boxes, Plus, Minus, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
 export default function StoreInventoryPage() {
@@ -61,7 +62,7 @@ export default function StoreInventoryPage() {
                   <div>
                     <h3 className="font-bold text-slate-900 text-sm line-clamp-1">{p.name}</h3>
                     <p className="text-xs text-slate-400 font-mono">SKU: {p.sku || 'N/A'}</p>
-                    <p className="text-xs font-bold text-slate-900 mt-1">${p.price.toFixed(2)}</p>
+                    <p className="text-xs font-bold text-slate-900 mt-1">{formatCurrency(p.price)}</p>
                   </div>
                 </div>
 

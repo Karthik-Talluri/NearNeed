@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useNearNeed } from '@/context/NearNeedContext';
+import { formatCurrency } from '@/lib/formatters';
 import { CATEGORIES } from '@/lib/mockData';
 import { BarChart3, TrendingUp, Users, Store, CalendarCheck, ShieldCheck } from 'lucide-react';
 
@@ -34,7 +35,7 @@ export default function AdminReportsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-xs">
             <span className="text-xs font-semibold text-slate-500 uppercase">Gross Hold Value</span>
-            <h2 className="text-3xl font-extrabold text-slate-900 mt-1">${totalVolume.toFixed(2)}</h2>
+            <h2 className="text-3xl font-extrabold text-slate-900 mt-1">{formatCurrency(totalVolume)}</h2>
             <span className="text-xs text-emerald-600 font-bold block mt-1">+18.4% this month</span>
           </div>
 

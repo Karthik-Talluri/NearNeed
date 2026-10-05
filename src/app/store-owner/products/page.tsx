@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useNearNeed } from '@/context/NearNeedContext';
+import { formatCurrency } from '@/lib/formatters';
 import { CATEGORIES } from '@/lib/mockData';
 import { Product } from '@/types';
 import { Plus, Search, Edit2, Trash2, CheckCircle2, AlertTriangle, Package } from 'lucide-react';
@@ -105,7 +106,7 @@ export default function StoreOwnerProductsPage() {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 font-mono text-slate-400">{product.sku || 'N/A'}</td>
-                        <td className="py-3.5 px-4 font-extrabold text-slate-900">${product.price.toFixed(2)}</td>
+                        <td className="py-3.5 px-4 font-extrabold text-slate-900">{formatCurrency(product.price)}</td>
                         <td className="py-3.5 px-4 font-bold">
                           {isOut ? (
                             <span className="text-rose-600 flex items-center gap-1">0 (Out of stock)</span>

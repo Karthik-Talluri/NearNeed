@@ -50,7 +50,7 @@ interface NearNeedContextType {
 const defaultSearchFilters: SearchFilters = {
   query: '',
   category: 'all',
-  location: 'Austin, TX',
+  location: 'Chennai, Tamil Nadu',
   maxDistanceKm: 10,
   inStockOnly: false,
   sortBy: 'distance',
@@ -66,9 +66,9 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [reservations, setReservations] = useState<Reservation[]>(INITIAL_RESERVATIONS);
   
   const [userLocation, setUserLocation] = useState({
-    address: 'Downtown, Austin, TX',
-    lat: 30.2672,
-    lng: -97.7431,
+    address: 'T Nagar, Chennai, Tamil Nadu',
+    lat: 13.0827,
+    lng: 80.2707,
   });
 
   const [searchFilters, setSearchFilters] = useState<SearchFilters>(defaultSearchFilters);
@@ -243,7 +243,7 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       userId: currentUser.id,
       userName: currentUser.name,
       userEmail: currentUser.email,
-      userPhone: currentUser.phone || '+1 (555) 000-0000',
+      userPhone: currentUser.phone || '+91 98765 43210',
       storeId: targetProduct.storeId,
       storeName: targetStore?.name || targetProduct.storeName || 'Store',
       storeAddress: targetStore?.address || targetProduct.storeAddress || '',

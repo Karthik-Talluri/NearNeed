@@ -443,7 +443,7 @@ export const Navbar: React.FC = () => {
                   type="text"
                   value={tempLocation}
                   onChange={(e) => setTempLocation(e.target.value)}
-                  placeholder="e.g. Downtown Austin, TX"
+                  placeholder="e.g. T Nagar, Chennai, Tamil Nadu"
                   className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm"
                   required
                 />
@@ -454,7 +454,7 @@ export const Navbar: React.FC = () => {
                   Popular Locations
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  {['Downtown, Austin, TX', 'South Lamar, Austin, TX', 'East Austin, TX', 'Domain, Austin, TX'].map((loc) => (
+                  {['T Nagar, Chennai, TN', 'Anna Nagar, Chennai, TN', 'Velachery, Chennai, TN', 'Indiranagar, Bengaluru, KA', 'Banjara Hills, Hyderabad, TS', 'Bandra, Mumbai, MH'].map((loc) => (
                     <button
                       key={loc}
                       type="button"

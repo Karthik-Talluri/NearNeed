@@ -25,6 +25,8 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+import { formatCurrency } from '@/lib/formatters';
+
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -210,7 +212,7 @@ export default function ProductDetailPage() {
               {/* Price */}
               <div className="pt-2">
                 <span className="text-3xl font-extrabold text-slate-900">
-                  ${product.price.toFixed(2)}
+                  {formatCurrency(product.price)}
                 </span>
                 <span className="text-xs text-slate-500 block mt-0.5">Pay in-store during pickup</span>
               </div>

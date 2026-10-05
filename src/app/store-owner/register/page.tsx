@@ -14,8 +14,8 @@ export default function StoreRegistrationPage() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0].name);
   const [address, setAddress] = useState('');
-  const [city, setCity] = useState('Austin, TX');
-  const [zipCode, setZipCode] = useState('78701');
+  const [city, setCity] = useState('Chennai, Tamil Nadu');
+  const [zipCode, setZipCode] = useState('600017');
   const [phone, setPhone] = useState('');
   const [hours, setHours] = useState('Mon-Sat: 10:00 AM - 8:00 PM');
   const [bannerUrl, setBannerUrl] = useState('https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&q=80&w=1200');
@@ -34,8 +34,8 @@ export default function StoreRegistrationPage() {
       address,
       city,
       zipCode,
-      lat: 30.2672,
-      lng: -97.7431,
+      lat: 13.0418,
+      lng: 80.2341,
       phone,
       category,
       logoUrl,
@@ -80,7 +80,7 @@ export default function StoreRegistrationPage() {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Urban Threads Boutique"
+                placeholder="e.g. Chennai Fashion Hub"
                 className="w-full p-3 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none"
                 required
               />
@@ -112,7 +112,7 @@ export default function StoreRegistrationPage() {
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+1 (512) 555-0192"
+                  placeholder="+91 98765 43210"
                   className="w-full p-3 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none"
                   required
                 />
@@ -127,7 +127,7 @@ export default function StoreRegistrationPage() {
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. 408 Congress Ave, Suite 100"
+                placeholder="e.g. No. 45, Usman Road, T Nagar"
                 className="w-full p-3 rounded-xl border border-slate-300 font-medium focus:ring-2 focus:ring-teal-500 focus:outline-none"
                 required
               />
@@ -149,7 +149,7 @@ export default function StoreRegistrationPage() {
 
               <div>
                 <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
-                  Zip Code
+                  PIN Code
                 </label>
                 <input
                   type="text"

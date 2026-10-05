@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Product, Reservation } from '@/types';
 import { useNearNeed } from '@/context/NearNeedContext';
+import { formatCurrency } from '@/lib/formatters';
 import { X, Calendar, Clock, MapPin, Store, CheckCircle2, AlertCircle, Phone, ShieldCheck, Loader2 } from 'lucide-react';
 
 interface ReservationModalProps {
@@ -25,7 +26,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [pickupDate, setPickupDate] = useState(defaultDateStr);
   const [pickupTime, setPickupTime] = useState('02:00 PM');
-  const [phone, setPhone] = useState(currentUser?.phone || '+1 (555) 234-5678');
+  const [phone, setPhone] = useState(currentUser?.phone || '+91 98765 43210');
   const [notes, setNotes] = useState('');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -142,10 +143,10 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                     {confirmedReservation.productName}
                   </h4>
                   <p className="text-xs text-slate-500">
-                    Qty: {confirmedReservation.quantity} × ${confirmedReservation.unitPrice.toFixed(2)}
+                    Qty: {confirmedReservation.quantity} × {formatCurrency(confirmedReservation.unitPrice)}
                   </p>
                   <p className="text-xs font-bold text-emerald-700 mt-0.5">
-                    Total: ${confirmedReservation.totalPrice.toFixed(2)}
+                    Total: {formatCurrency(confirmedReservation.totalPrice)}
                   </p>
                 </div>
               </div>
@@ -208,7 +209,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                 </p>
                 <div className="flex items-center justify-between mt-1">
                   <span className="text-xs font-bold text-slate-900">
-                    ${product.price.toFixed(2)} each
+                    {formatCurrency(product.price)} each
                   </span>
                   <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                     {product.stock} available
@@ -301,7 +302,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+1 (555) 000-0000"
+                placeholder="+91 98765 43210"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 required
               />
@@ -328,7 +329,7 @@ export const ReservationModal: React.FC<ReservationModalProps> = ({
                 <span className="text-[11px] text-emerald-700">No advance online payment required</span>
               </div>
               <span className="text-xl font-extrabold text-emerald-800">
-                ${totalPrice.toFixed(2)}
+                {formatCurrency(totalPrice)}
               </span>
             </div>
 
