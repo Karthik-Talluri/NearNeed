@@ -20,30 +20,45 @@ export default function StoreRegistrationPage() {
   const [hours, setHours] = useState('Mon-Sat: 10:00 AM - 8:00 PM');
   const [bannerUrl, setBannerUrl] = useState('https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&q=80&w=1200');
   const [logoUrl, setLogoUrl] = useState('https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?auto=format&fit=crop&q=80&w=200');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Switch active role to STORE_OWNER
-    switchRole('STORE_OWNER');
+    setIsLoading(true);
+    setErrorMsg('');
 
-    const newStore = addStore({
-      ownerId: currentUser.id,
-      name,
-      description,
-      address,
-      city,
-      zipCode,
-      lat: 13.0418,
-      lng: 80.2341,
-      phone,
-      category,
-      logoUrl,
-      bannerUrl,
-      hours,
-    });
+    try {
+      // Switch active role to STORE_OWNER
+      switchRole('STORE_OWNER');
 
-    router.push('/store-owner/dashboard');
+      const newStore = await addStore({
+        ownerId: currentUser.id,
+        name,
+        description,
+        address,
+        city,
+        zipCode,
+        lat: 13.0418,
+        lng: 80.2341,
+        phone,
+        category,
+        logoUrl,
+        bannerUrl,
+        hours,
+      });
+
+      if (newStore) {
+        router.push('/store-owner/dashboard');
+      } else {
+        setErrorMsg('Failed to create store. Please check the fields and try again.');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('An error occurred while creating your store.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -71,6 +86,12 @@ export default function StoreRegistrationPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+            
+            {errorMsg && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">
+                {errorMsg}
+              </div>
+            )}
             
             <div>
               <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
@@ -192,9 +213,10 @@ export default function StoreRegistrationPage() {
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
               <button
                 type="submit"
-                className="w-full py-3.5 rounded-xl font-extrabold text-white bg-teal-700 hover:bg-teal-800 shadow-md text-sm transition-colors"
+                disabled={isLoading}
+                className="w-full py-3.5 rounded-xl font-extrabold text-white bg-teal-700 hover:bg-teal-800 shadow-md text-sm transition-colors disabled:opacity-50"
               >
-                Complete Store Registration →
+                {isLoading ? 'Creating Store...' : 'Complete Store Registration →'}
               </button>
             </div>
 

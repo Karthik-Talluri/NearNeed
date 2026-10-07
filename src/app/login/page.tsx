@@ -19,9 +19,15 @@ export default function LoginPage() {
     setErrorMsg('');
     setIsLoading(true);
     try {
-      const success = await loginUser(email, password);
-      if (success) {
-        router.push('/');
+      const user = await loginUser(email, password);
+      if (user) {
+        if (user.role === 'STORE_OWNER') {
+          router.push('/store-owner/dashboard');
+        } else if (user.role === 'ADMIN') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/');
+        }
       } else {
         setErrorMsg('Invalid email address or password. Please try again.');
       }
@@ -38,8 +44,8 @@ export default function LoginPage() {
     setIsLoading(true);
     setErrorMsg('');
     try {
-      const success = await loginUser(userEmail, 'password123');
-      if (success) {
+      const user = await loginUser(userEmail, 'password123');
+      if (user) {
         switchRole(role);
         if (role === 'STORE_OWNER') {
           router.push('/store-owner/dashboard');

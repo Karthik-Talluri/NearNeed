@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useNearNeed } from '@/context/NearNeedContext';
 import { formatCurrency } from '@/lib/formatters';
 import { CATEGORIES } from '@/lib/mockData';
@@ -9,13 +10,28 @@ import { Product } from '@/types';
 import { Plus, Search, Edit2, Trash2, CheckCircle2, AlertTriangle, Package } from 'lucide-react';
 
 export default function StoreOwnerProductsPage() {
-  const { stores, products, deleteProduct, updateProduct, currentUser } = useNearNeed();
+  const router = useRouter();
+  const { stores, products, deleteProduct, updateProduct, currentUser, isAuthenticated, isAuthLoaded } = useNearNeed();
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (isAuthLoaded) {
+      if (!isAuthenticated) {
+        router.push('/login');
+      } else if (currentUser.role !== 'STORE_OWNER') {
+        router.push('/');
+      }
+    }
+  }, [isAuthLoaded, isAuthenticated, currentUser, router]);
+
+  if (!isAuthLoaded || !isAuthenticated || currentUser.role !== 'STORE_OWNER') {
+    return null;
+  }
   
   const myStores = stores.filter((s) => s.ownerId === currentUser.id);
-  const activeStore = myStores[0] || stores[0];
+  const activeStore = myStores[0] || null;
 
-  const storeProducts = products.filter((p) => p.storeId === activeStore.id);
+  const storeProducts = activeStore ? products.filter((p) => p.storeId === activeStore.id) : [];
   const filteredProducts = storeProducts.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -35,7 +51,7 @@ export default function StoreOwnerProductsPage() {
               Store Product Catalog ({storeProducts.length})
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Manage items offered at <strong className="text-slate-800">{activeStore.name}</strong>
+              Manage items offered at <strong className="text-slate-800">{activeStore?.name || 'Your Store'}</strong>
             </p>
           </div>
 

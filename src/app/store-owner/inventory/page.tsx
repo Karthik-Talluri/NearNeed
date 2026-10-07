@@ -1,17 +1,33 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useNearNeed } from '@/context/NearNeedContext';
 import { formatCurrency } from '@/lib/formatters';
 import { Boxes, Plus, Minus, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 
 export default function StoreInventoryPage() {
-  const { stores, products, updateProduct, currentUser } = useNearNeed();
+  const router = useRouter();
+  const { stores, products, updateProduct, currentUser, isAuthenticated, isAuthLoaded } = useNearNeed();
+
+  useEffect(() => {
+    if (isAuthLoaded) {
+      if (!isAuthenticated) {
+        router.push('/login');
+      } else if (currentUser.role !== 'STORE_OWNER') {
+        router.push('/');
+      }
+    }
+  }, [isAuthLoaded, isAuthenticated, currentUser, router]);
+
+  if (!isAuthLoaded || !isAuthenticated || currentUser.role !== 'STORE_OWNER') {
+    return null;
+  }
 
   const myStores = stores.filter((s) => s.ownerId === currentUser.id);
-  const activeStore = myStores[0] || stores[0];
+  const activeStore = myStores[0] || null;
 
-  const storeProducts = products.filter((p) => p.storeId === activeStore.id);
+  const storeProducts = activeStore ? products.filter((p) => p.storeId === activeStore.id) : [];
 
   const updateStock = (productId: string, delta: number) => {
     const prod = storeProducts.find((p) => p.id === productId);
@@ -27,7 +43,7 @@ export default function StoreInventoryPage() {
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
-              {activeStore.name}
+              {activeStore?.name || 'Store Setup'}
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-0.5">
               Live Stock Inventory Manager

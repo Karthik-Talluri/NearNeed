@@ -38,7 +38,7 @@ export default function RegisterPage() {
 
       if (success) {
         if (role === 'STORE_OWNER') {
-          router.push('/store-owner/register');
+          router.push('/store-owner/dashboard');
         } else {
           router.push('/');
         }

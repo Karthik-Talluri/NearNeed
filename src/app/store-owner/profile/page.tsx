@@ -7,27 +7,29 @@ import { Store as StoreIcon, MapPin, Phone, Clock, BadgeCheck, Settings, Save } 
 export default function StoreOwnerProfilePage() {
   const { stores, updateStore, currentUser } = useNearNeed();
   const myStores = stores.filter((s) => s.ownerId === currentUser.id);
-  const activeStore = myStores[0] || stores[0];
+  const activeStore = myStores[0] || null;
 
-  const [name, setName] = useState(activeStore.name);
-  const [description, setDescription] = useState(activeStore.description);
-  const [address, setAddress] = useState(activeStore.address);
-  const [phone, setPhone] = useState(activeStore.phone);
-  const [hours, setHours] = useState(activeStore.hours);
+  const [name, setName] = useState(activeStore?.name || '');
+  const [description, setDescription] = useState(activeStore?.description || '');
+  const [address, setAddress] = useState(activeStore?.address || '');
+  const [phone, setPhone] = useState(activeStore?.phone || '');
+  const [hours, setHours] = useState(activeStore?.hours || '');
 
   const [savedMsg, setSavedMsg] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateStore(activeStore.id, {
-      name,
-      description,
-      address,
-      phone,
-      hours,
-    });
-    setSavedMsg(true);
-    setTimeout(() => setSavedMsg(false), 3000);
+    if (activeStore) {
+      updateStore(activeStore.id, {
+        name,
+        description,
+        address,
+        phone,
+        hours,
+      });
+      setSavedMsg(true);
+      setTimeout(() => setSavedMsg(false), 3000);
+    }
   };
 
   return (

@@ -1,19 +1,35 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useNearNeed } from '@/context/NearNeedContext';
 import { formatCurrency } from '@/lib/formatters';
 import { ReservationStatus } from '@/types';
 import { CalendarCheck, Clock, CheckCircle2, XCircle, Phone, MapPin, User } from 'lucide-react';
 
 export default function StoreOwnerReservationsPage() {
-  const { stores, reservations, updateReservationStatus, currentUser } = useNearNeed();
+  const router = useRouter();
+  const { stores, reservations, updateReservationStatus, currentUser, isAuthenticated, isAuthLoaded } = useNearNeed();
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
 
-  const myStores = stores.filter((s) => s.ownerId === currentUser.id);
-  const activeStore = myStores[0] || stores[0];
+  useEffect(() => {
+    if (isAuthLoaded) {
+      if (!isAuthenticated) {
+        router.push('/login');
+      } else if (currentUser.role !== 'STORE_OWNER') {
+        router.push('/');
+      }
+    }
+  }, [isAuthLoaded, isAuthenticated, currentUser, router]);
 
-  const storeReservations = reservations.filter((r) => r.storeId === activeStore.id);
+  if (!isAuthLoaded || !isAuthenticated || currentUser.role !== 'STORE_OWNER') {
+    return null;
+  }
+
+  const myStores = stores.filter((s) => s.ownerId === currentUser.id);
+  const activeStore = myStores[0] || null;
+
+  const storeReservations = activeStore ? reservations.filter((r) => r.storeId === activeStore.id) : [];
   const filtered = storeReservations.filter((r) => filterStatus === 'ALL' || r.status === filterStatus);
 
   return (
@@ -23,7 +39,7 @@ export default function StoreOwnerReservationsPage() {
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
-              {activeStore.name}
+              {activeStore?.name || 'Store Operations'}
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-0.5">
               Customer Hold Reservations ({storeReservations.length})

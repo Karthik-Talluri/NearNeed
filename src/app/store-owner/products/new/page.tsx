@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useNearNeed } from '@/context/NearNeedContext';
 import { CATEGORIES } from '@/lib/mockData';
@@ -8,10 +8,20 @@ import { Package, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 
 export default function AddProductPage() {
   const router = useRouter();
-  const { stores, addProduct, currentUser } = useNearNeed();
+  const { stores, addProduct, currentUser, isAuthenticated, isAuthLoaded } = useNearNeed();
+
+  useEffect(() => {
+    if (isAuthLoaded) {
+      if (!isAuthenticated) {
+        router.push('/login');
+      } else if (currentUser.role !== 'STORE_OWNER') {
+        router.push('/');
+      }
+    }
+  }, [isAuthLoaded, isAuthenticated, currentUser, router]);
 
   const myStores = stores.filter((s) => s.ownerId === currentUser.id);
-  const activeStore = myStores[0] || stores[0];
+  const activeStore = myStores[0] || null;
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -22,8 +32,13 @@ export default function AddProductPage() {
   const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800');
   const [tagsInput, setTagsInput] = useState('');
 
+  if (!isAuthLoaded || !isAuthenticated || currentUser.role !== 'STORE_OWNER') {
+    return null;
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeStore) return;
     const tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
 
     addProduct({
@@ -56,7 +71,7 @@ export default function AddProductPage() {
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
           <div>
             <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
-              {activeStore.name}
+              {activeStore?.name || 'Store Setup'}
             </span>
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mt-0.5">
               Add New Product to Store Catalog
