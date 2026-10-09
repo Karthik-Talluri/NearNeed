@@ -31,30 +31,50 @@ export default function AddProductPage() {
   const [sku, setSku] = useState('');
   const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=800');
   const [tagsInput, setTagsInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   if (!isAuthLoaded || !isAuthenticated || currentUser.role !== 'STORE_OWNER') {
     return null;
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeStore) return;
-    const tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
+    if (!activeStore) {
+      setErrorMsg('No store found. Please register a store first.');
+      return;
+    }
 
-    addProduct({
-      storeId: activeStore.id,
-      name,
-      description,
-      category,
-      price: parseFloat(price) || 0,
-      sku: sku || `SKU-${Date.now().toString().slice(-6)}`,
-      stock: parseInt(stock, 10) || 1,
-      imageUrl,
-      tags,
-      isActive: true,
-    });
+    setIsLoading(true);
+    setErrorMsg('');
 
-    router.push('/store-owner/products');
+    try {
+      const tags = tagsInput.split(',').map((t) => t.trim()).filter(Boolean);
+
+      const createdProduct = await addProduct({
+        storeId: activeStore.id,
+        name,
+        description,
+        category,
+        price: parseFloat(price) || 0,
+        sku: sku || `SKU-${Date.now().toString().slice(-6)}`,
+        stock: parseInt(stock, 10) || 1,
+        imageUrl,
+        tags,
+        isActive: true,
+      });
+
+      if (createdProduct) {
+        router.push('/store-owner/products');
+      } else {
+        setErrorMsg('Failed to create product. Please check inputs and try again.');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('An error occurred while creating product.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -82,6 +102,12 @@ export default function AddProductPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+            
+            {errorMsg && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 font-medium">
+                {errorMsg}
+              </div>
+            )}
             
             <div>
               <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
@@ -213,9 +239,10 @@ export default function AddProductPage() {
               </button>
               <button
                 type="submit"
-                className="px-6 py-2.5 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md"
+                disabled={isLoading}
+                className="px-6 py-2.5 rounded-xl font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-md disabled:opacity-50"
               >
-                Save & Publish Item
+                {isLoading ? 'Saving Product...' : 'Save & Publish Item'}
               </button>
             </div>
 

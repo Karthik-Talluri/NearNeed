@@ -22,9 +22,9 @@ interface NearNeedContextType {
   
   // Products
   products: Product[];
-  addProduct: (productData: Omit<Product, 'id' | 'storeName' | 'storeDistanceKm' | 'storeAddress' | 'storePhone'>) => Product;
-  updateProduct: (id: string, productData: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
+  addProduct: (productData: Omit<Product, 'id' | 'storeName' | 'storeDistanceKm' | 'storeAddress' | 'storePhone'>) => Promise<Product | null>;
+  updateProduct: (id: string, productData: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
   
   // Reservations
   reservations: Reservation[];
@@ -102,6 +102,31 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  // Function to load products from PostgreSQL database
+  const loadDatabaseProducts = async (isStoreOwner = false) => {
+    try {
+      const url = isStoreOwner ? '/api/store-owner/products' : '/api/products/search';
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.products && data.products.length > 0) {
+          setProducts((prevProducts) => {
+            const dbMap = new Map(data.products.map((p: Product) => [p.id, p]));
+            const merged = [...data.products];
+            prevProducts.forEach((p) => {
+              if (!dbMap.has(p.id)) {
+                merged.push(p);
+              }
+            });
+            return merged;
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching products from DB:', err);
+    }
+  };
+
   // Restore authenticated session from /api/auth/me on mount
   useEffect(() => {
     async function checkAuthSession() {
@@ -112,13 +137,17 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (data.user) {
             setCurrentUser(data.user);
             setIsAuthenticated(true);
-            await loadDatabaseStores(data.user.role === 'STORE_OWNER');
+            const isOwner = data.user.role === 'STORE_OWNER';
+            await loadDatabaseStores(isOwner);
+            await loadDatabaseProducts(isOwner);
           } else {
             setIsAuthenticated(false);
             await loadDatabaseStores(false);
+            await loadDatabaseProducts(false);
           }
         } else {
           await loadDatabaseStores(false);
+          await loadDatabaseProducts(false);
         }
       } catch (err) {
         console.error('Error checking auth session:', err);
@@ -176,7 +205,9 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (data.user) {
           setCurrentUser(data.user);
           setIsAuthenticated(true);
-          await loadDatabaseStores(data.user.role === 'STORE_OWNER');
+          const isOwner = data.user.role === 'STORE_OWNER';
+          await loadDatabaseStores(isOwner);
+          await loadDatabaseProducts(isOwner);
           return data.user;
         }
       }
@@ -199,7 +230,9 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (data.user) {
           setCurrentUser(data.user);
           setIsAuthenticated(true);
-          await loadDatabaseStores(data.user.role === 'STORE_OWNER');
+          const isOwner = data.user.role === 'STORE_OWNER';
+          await loadDatabaseStores(isOwner);
+          await loadDatabaseProducts(isOwner);
           return data.user;
         }
       }
@@ -270,9 +303,32 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // Product Management
-  const addProduct = (productData: Omit<Product, 'id' | 'storeName' | 'storeDistanceKm' | 'storeAddress' | 'storePhone'>) => {
+  const addProduct = async (productData: Omit<Product, 'id' | 'storeName' | 'storeDistanceKm' | 'storeAddress' | 'storePhone'>): Promise<Product | null> => {
+    try {
+      const res = await fetch('/api/store-owner/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.product) {
+          const createdProduct: Product = data.product;
+          setProducts((prev) => [createdProduct, ...prev.filter((p) => p.id !== createdProduct.id)]);
+          return createdProduct;
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        console.error('Failed to create product via API:', errData.error);
+      }
+    } catch (err) {
+      console.error('API Error adding product:', err);
+    }
+
+    // Fallback if API fails
     const matchingStore = stores.find((s) => s.id === productData.storeId);
-    const newProduct: Product = {
+    const fallbackProduct: Product = {
       ...productData,
       id: `prod-${Date.now()}`,
       storeName: matchingStore?.name || 'Local Store',
@@ -280,18 +336,58 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       storeAddress: matchingStore?.address || 'Main St',
       storePhone: matchingStore?.phone || '',
     };
-    setProducts((prev) => [newProduct, ...prev]);
-    return newProduct;
+    setProducts((prev) => [fallbackProduct, ...prev]);
+    return fallbackProduct;
   };
 
-  const updateProduct = (id: string, productData: Partial<Product>) => {
+  const updateProduct = async (id: string, productData: Partial<Product>): Promise<void> => {
+    try {
+      const res = await fetch(`/api/store-owner/products/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.product) {
+          setProducts((prev) =>
+            prev.map((p) => (p.id === id ? { ...p, ...data.product } : p))
+          );
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('API Error updating product:', err);
+    }
+
+    // Fallback in-memory update
     setProducts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, ...productData } : p))
     );
   };
 
-  const deleteProduct = (id: string) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  const deleteProduct = async (id: string): Promise<void> => {
+    try {
+      const res = await fetch(`/api/store-owner/products/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.product) {
+          setProducts((prev) =>
+            prev.map((p) => (p.id === id ? { ...p, isActive: false } : p))
+          );
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('API Error deleting product:', err);
+    }
+
+    // Fallback soft delete
+    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, isActive: false } : p)));
   };
 
   // Reservations
