@@ -304,10 +304,18 @@ export default function StoreOwnerDashboard() {
                         <div className="flex items-center justify-end gap-1">
                           {res.status === 'PENDING' && (
                             <button
+                              onClick={() => updateReservationStatus(res.id, 'APPROVED')}
+                              className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[11px] rounded-lg shadow-xs"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          {res.status === 'APPROVED' && (
+                            <button
                               onClick={() => updateReservationStatus(res.id, 'READY_FOR_PICKUP')}
                               className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] rounded-lg shadow-xs"
                             >
-                              Hold & Ready
+                              Mark Ready
                             </button>
                           )}
                           {res.status === 'READY_FOR_PICKUP' && (
@@ -315,10 +323,10 @@ export default function StoreOwnerDashboard() {
                               onClick={() => updateReservationStatus(res.id, 'COMPLETED')}
                               className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] rounded-lg"
                             >
-                              Complete Pickup
+                              Complete
                             </button>
                           )}
-                          {res.status !== 'COMPLETED' && res.status !== 'CANCELLED' && (
+                          {(res.status === 'PENDING' || res.status === 'APPROVED') && (
                             <button
                               onClick={() => updateReservationStatus(res.id, 'CANCELLED')}
                               className="p-1 text-slate-400 hover:text-rose-600"

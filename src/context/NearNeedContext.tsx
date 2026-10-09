@@ -35,7 +35,7 @@ interface NearNeedContextType {
     pickupTime: string;
     notes?: string;
   }) => Reservation;
-  updateReservationStatus: (id: string, status: ReservationStatus) => void;
+  updateReservationStatus: (id: string, status: ReservationStatus) => Promise<void>;
   cancelReservation: (id: string) => void;
   
   // Location & Search
@@ -127,6 +127,22 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
+  // Function to load reservations from PostgreSQL database
+  const loadDatabaseReservations = async (isStoreOwner = false) => {
+    try {
+      const url = isStoreOwner ? '/api/store-owner/reservations' : '/api/reservations';
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.reservations && Array.isArray(data.reservations)) {
+          setReservations(data.reservations);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching reservations from DB:', err);
+    }
+  };
+
   // Restore authenticated session from /api/auth/me on mount
   useEffect(() => {
     async function checkAuthSession() {
@@ -140,6 +156,7 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const isOwner = data.user.role === 'STORE_OWNER';
             await loadDatabaseStores(isOwner);
             await loadDatabaseProducts(isOwner);
+            await loadDatabaseReservations(isOwner);
           } else {
             setIsAuthenticated(false);
             await loadDatabaseStores(false);
@@ -208,6 +225,7 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const isOwner = data.user.role === 'STORE_OWNER';
           await loadDatabaseStores(isOwner);
           await loadDatabaseProducts(isOwner);
+          await loadDatabaseReservations(isOwner);
           return data.user;
         }
       }
@@ -233,6 +251,7 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const isOwner = data.user.role === 'STORE_OWNER';
           await loadDatabaseStores(isOwner);
           await loadDatabaseProducts(isOwner);
+          await loadDatabaseReservations(isOwner);
           return data.user;
         }
       }
@@ -437,10 +456,39 @@ export const NearNeedProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return newRes;
   };
 
-  const updateReservationStatus = (id: string, status: ReservationStatus) => {
-    setReservations((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
-    );
+  const updateReservationStatus = async (id: string, status: ReservationStatus) => {
+    const isOwner = currentUser?.role === 'STORE_OWNER';
+    const url = isOwner ? `/api/store-owner/reservations/${id}` : `/api/reservations/${id}`;
+    const body = isOwner ? { status } : { action: status === 'CANCELLED' ? 'CANCEL' : status };
+
+    try {
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.reservation) {
+          setReservations((prev) =>
+            prev.map((r) => (r.id === id ? data.reservation : r))
+          );
+          await loadDatabaseProducts(isOwner);
+          return;
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Failed to update status to ${status}`);
+      }
+    } catch (err) {
+      console.error('API error updating reservation status:', err);
+      // Fallback in-memory update
+      setReservations((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status } : r))
+      );
+      throw err;
+    }
   };
 
   const cancelReservation = (id: string) => {

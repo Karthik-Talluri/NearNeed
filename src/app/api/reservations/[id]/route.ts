@@ -19,37 +19,51 @@ export async function PATCH(
     const body = await request.json().catch(() => ({}));
     const action = body.action || 'CANCEL';
 
-    const reservation = await prisma.reservation.findUnique({
-      where: { id: reservationId },
-    });
-
-    if (!reservation) {
-      return NextResponse.json(
-        { error: 'Reservation not found' },
-        { status: 404 }
-      );
-    }
-
-    if (reservation.userId !== session.userId) {
-      return NextResponse.json(
-        { error: 'You are not authorized to modify this reservation' },
-        { status: 403 }
-      );
-    }
-
     if (action === 'CANCEL') {
-      if (reservation.status !== 'PENDING') {
-        return NextResponse.json(
-          { error: `Cannot cancel reservation with status '${reservation.status}'` },
-          { status: 400 }
-        );
-      }
-
-      // Cancel reservation and restore product stock
-      const updatedReservation = await prisma.$transaction(async (tx) => {
-        const updated = await tx.reservation.update({
+      const txResult = await prisma.$transaction(async (tx) => {
+        const reservation = await tx.reservation.findUnique({
           where: { id: reservationId },
+        });
+
+        if (!reservation) {
+          return { error: 'Reservation not found', status: 404 };
+        }
+
+        if (reservation.userId !== session.userId) {
+          return { error: 'You are not authorized to modify this reservation', status: 403 };
+        }
+
+        if (reservation.status !== 'PENDING') {
+          return {
+            error: `Cannot cancel reservation with status '${reservation.status}'`,
+            status: 400,
+          };
+        }
+
+        // Atomic conditional update to prevent concurrent duplicate stock restorations
+        const updateResult = await tx.reservation.updateMany({
+          where: {
+            id: reservationId,
+            status: 'PENDING',
+          },
           data: { status: 'CANCELLED' },
+        });
+
+        if (updateResult.count === 0) {
+          return {
+            error: 'Conflict: The reservation status was already modified by another request.',
+            status: 409,
+          };
+        }
+
+        // Restore product stock ONLY IF atomic update succeeded
+        await tx.product.update({
+          where: { id: reservation.productId },
+          data: { stock: { increment: reservation.quantity } },
+        });
+
+        const updatedReservation = await tx.reservation.findUnique({
+          where: { id: reservationId },
           include: {
             product: true,
             store: true,
@@ -59,15 +73,14 @@ export async function PATCH(
           },
         });
 
-        // Restore stock
-        await tx.product.update({
-          where: { id: reservation.productId },
-          data: { stock: { increment: reservation.quantity } },
-        });
-
-        return updated;
+        return { reservation: updatedReservation, status: 200 };
       });
 
+      if ('error' in txResult && txResult.error) {
+        return NextResponse.json({ error: txResult.error }, { status: txResult.status });
+      }
+
+      const updatedReservation = txResult.reservation!;
       const formatted = {
         id: updatedReservation.id,
         reservationNumber: updatedReservation.reservationNumber,
